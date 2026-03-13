@@ -26,10 +26,22 @@ Question: {question}
 Answer:"""
 
 
+NUM_PREDICT = -1   # max output tokens (-1 = unlimited)
+NUM_CTX     = 8192   # context window: prompt + output tokens combined
+
+
 def generate(prompt: str) -> str:
     response = requests.post(
         OLLAMA_URL,
-        json={"model": LLM_MODEL, "prompt": prompt, "stream": True},
+        json={
+            "model":   LLM_MODEL,
+            "prompt":  prompt,
+            "stream":  True,
+            "options": {
+                "num_predict": NUM_PREDICT,
+                "num_ctx":     NUM_CTX,
+            },
+        },
         stream=True,
     )
     response.raise_for_status()

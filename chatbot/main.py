@@ -9,7 +9,7 @@ from memory    import load_memory, save_memory, add_turn, format_for_prompt
 TOP_K = 5
 
 print("Loading model and vector store...")
-model, collection = load_retriever()
+model, collection, bm25, store = load_retriever()
 print(f"Ready. {collection.count()} chunks indexed.")
 
 history = load_memory()
@@ -30,8 +30,8 @@ while True:
         print("Memory saved. Bye.")
         break
 
-    # Retrieve relevant chunks from the vector store
-    matches = retrieve(question, collection, model, top_k=TOP_K)
+    # Retrieve relevant chunks — hybrid BM25 + semantic, merged via RRF
+    matches = retrieve(question, collection, model, bm25, store, top_k=TOP_K)
 
     if not matches:
         print("No relevant chunks found.\n")
@@ -52,5 +52,5 @@ while True:
 
     print("\nSources:")
     for m in matches:
-        print(f"  [{m['distance']}]  {m['source']}  chunk {m['chunk_index']}")
+        print(f"  [rrf={m['rrf_score']}]  {m['source']}  chunk {m['chunk_index']}")
     print()

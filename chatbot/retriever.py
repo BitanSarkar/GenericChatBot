@@ -42,6 +42,12 @@ RRF_K         = 60
 # Outputs a relevance score for each (query, chunk) pair
 RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
+# Minimum reranker score to consider a chunk relevant.
+# MS-MARCO cross-encoder scores: >0 = relevant, <-5 = clearly irrelevant.
+# If the best chunk doesn't clear this bar, retrieval returns nothing —
+# private mode will then refuse to answer instead of hallucinating.
+RERANKER_THRESHOLD = -3.0
+
 
 def _rrf_merge(
     semantic_hits: list[dict],
@@ -147,8 +153,14 @@ def retrieve(
         candidate["reranker_score"] = round(float(score), 4)
 
     reranked = sorted(candidates, key=lambda x: x["reranker_score"], reverse=True)
+    top      = reranked[:top_k]
 
-    return reranked[:top_k]
+    # If the best chunk doesn't clear the threshold, nothing is relevant.
+    # Return empty list — caller decides how to handle (refuse, fallback, etc.)
+    if top and top[0]["reranker_score"] < RERANKER_THRESHOLD:
+        return []
+
+    return top
 
 
 def load_retriever():

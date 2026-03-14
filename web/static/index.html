@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GenericChatBot</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <!-- highlight.js — code syntax theme (dark, minimal) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+  <!-- KaTeX — LaTeX rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- ── Sidebar ──────────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar">
+
+      <div class="sidebar-top">
+        <span class="sidebar-title">Files</span>
+        <label class="btn-add" for="fileInput" title="Add files">+</label>
+        <input type="file" id="fileInput" multiple hidden />
+        <input type="file" id="folderInput" webkitdirectory hidden />
+      </div>
+
+      <ul class="file-list" id="fileList">
+        <li class="file-empty">No files yet</li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusMessage">—</span>
+        <span class="chunk-badge" id="chunkCount"></span>
+      </div>
+
+    </aside>
+
+    <!-- ── Main ─────────────────────────────────────────────────── -->
+    <div class="main">
+
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="icon-btn" id="sidebarToggle" title="Toggle sidebar">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <rect x="2" y="3" width="12" height="1.5" rx="0.75"/>
+              <rect x="2" y="7.25" width="12" height="1.5" rx="0.75"/>
+              <rect x="2" y="11.5" width="12" height="1.5" rx="0.75"/>
+            </svg>
+          </button>
+          <span class="app-name">GenericChatBot</span>
+        </div>
+        <div class="header-right">
+          <select id="modeSelect">
+            <option value="hybrid"  selected>Hybrid</option>
+            <option value="private">Private</option>
+            <option value="public" >Public</option>
+          </select>
+          <button class="icon-btn danger" id="clearBtn" title="Clear conversation">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6M14 11v6"/>
+              <path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages -->
+      <div class="messages" id="messages">
+        <div class="msg bot" id="welcomeMsg">
+          <div class="msg-body">
+            Start by uploading documents in the sidebar, then ask me anything.
+            <br/><br/>
+            <span class="muted">Hybrid — docs + model knowledge &nbsp;·&nbsp; Private — docs only &nbsp;·&nbsp; Public — model only</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="input-wrap">
+        <textarea id="questionInput" placeholder="Ask something…" rows="1"></textarea>
+        <button class="send-btn" id="sendBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- marked.js — markdown parser -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <!-- highlight.js — syntax highlighting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- KaTeX — LaTeX renderer + auto-render extension -->
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

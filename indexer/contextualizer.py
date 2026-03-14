@@ -33,11 +33,13 @@ import json
 import hashlib
 import threading
 import requests
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-ROOT       = Path(__file__).parent.parent
-CACHE_PATH = ROOT / "output/context_cache.json"
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
+from shared.redis_client import get_redis, CACHE_KEY
 
 OLLAMA_URL         = "http://localhost:11434/api/generate"
 LLM_MODEL          = "qwen2.5:0.5b"
@@ -56,13 +58,14 @@ def _chunk_hash(chunk_text: str) -> str:
 
 
 def _load_cache() -> dict:
-    if CACHE_PATH.exists():
-        return json.loads(CACHE_PATH.read_text())
-    return {}
+    """Load entire context cache from Redis Hash into memory (fast HGETALL)."""
+    return get_redis().hgetall(CACHE_KEY)
 
 
 def _save_cache(cache: dict) -> None:
-    CACHE_PATH.write_text(json.dumps(cache, indent=2))
+    """Persist the in-memory cache dict back to Redis Hash."""
+    if cache:
+        get_redis().hset(CACHE_KEY, mapping=cache)
 
 
 def _build_context_prompt(document_text: str, chunk_text: str) -> str:
@@ -200,9 +203,9 @@ def contextualize_chunks(
                 status = enriched_chunk["text"][:80] if not error else f"[FAILED: {error}]"
                 print(f"  [{completed:>4}/{total}] {hit_marker}  chunk {enriched_chunk['chunk_index']}  →  {status}")
 
-    # Persist updated cache to disk
+    # Persist updated cache to Redis
     _save_cache(cache)
-    print(f"\nCache saved → {CACHE_PATH.relative_to(ROOT)}  ({len(cache)} entries)")
+    print(f"\nCache saved → Redis:{CACHE_KEY}  ({len(cache)} entries)")
 
     print(f"Done. {total - failed}/{total} chunks enriched.")
     if failed:

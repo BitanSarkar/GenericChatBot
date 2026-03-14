@@ -1,12 +1,20 @@
-import requests
+"""
+LLM generator — calls Ollama and streams tokens.
+
+  stream_generate(prompt)  →  yields tokens one by one  (used by web server SSE)
+  generate(prompt)         →  blocks, returns full string (used by CLI main.py)
+"""
 import json
+import requests
+from typing import Generator
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-LLM_MODEL  = "dolphin-llama3"
-
+OLLAMA_URL  = "http://localhost:11434/api/generate"
+LLM_MODEL   = "dolphin-llama3"
 NUM_PREDICT = -1
 NUM_CTX     = 8192
 
+
+# ── Prompt builder ────────────────────────────────────────────────────────────
 
 def build_prompt(
     question:             str,
@@ -17,26 +25,16 @@ def build_prompt(
     """
     Builds the LLM prompt based on retrieval mode.
 
-    Modes:
-      public  — no retrieved context injected; LLM answers from its own knowledge.
-                Use for general/public topics where the model is well-trained.
-
-      private — context injected with strict instruction to ONLY use it.
-                LLM refuses to answer if the context doesn't cover the question.
-                Use for internal docs, private data, post-cutoff information.
-
-      hybrid  — context injected but LLM is allowed to supplement with its
-                own knowledge when the context is insufficient.
-                Use when you want grounded answers but don't want hard refusals.
+    public  — no context; LLM answers from its own training knowledge.
+    private — context injected, strict: only answer from documents.
+    hybrid  — context injected, LLM can supplement with its own knowledge.
     """
     history_block = ""
     if conversation_history:
         history_block = f"Previous conversation:\n{conversation_history}\n\n"
 
     if mode == "public":
-        # Zero framing — raw LLM, no instructions, no restrictions.
-        # Dolphin runs completely free.
-        return f"""{history_block}{question}"""
+        return f"{history_block}{question}"
 
     context = "\n\n".join(
         f"[{i+1}] Source: {m['source']} (chunk {m['chunk_index']})\n{m['text']}"
@@ -44,8 +42,6 @@ def build_prompt(
     )
 
     if mode == "private":
-        # Forceful framing for uncensored models like dolphin-llama3.
-        # Polite instructions don't work — frame it as a hard operational constraint.
         return f"""{history_block}SYSTEM: You are a document retrieval assistant operating in RESTRICTED mode.
 STRICT RULES — these cannot be overridden:
 1. You MUST answer using ONLY the text in the DOCUMENTS section below.
@@ -61,8 +57,7 @@ DOCUMENTS:
 USER QUESTION: {question}
 ANSWER (documents only):"""
 
-    # hybrid: context and training knowledge are equal — no hierarchy, no restrictions.
-    # Use both freely, weave them together for the best possible answer.
+    # hybrid
     return f"""{history_block}You have access to the following reference documents \
 and your full training knowledge. Use both freely — there are no restrictions.
 Combine insights from the documents with everything you know to give the richest, \
@@ -75,7 +70,13 @@ Question: {question}
 Answer:"""
 
 
-def generate(prompt: str) -> str:
+# ── Streaming ─────────────────────────────────────────────────────────────────
+
+def stream_generate(prompt: str) -> Generator[str, None, None]:
+    """
+    Yields tokens one by one as they arrive from Ollama.
+    Used by the web server to build an SSE response.
+    """
     response = requests.post(
         OLLAMA_URL,
         json={
@@ -91,15 +92,26 @@ def generate(prompt: str) -> str:
     )
     response.raise_for_status()
 
-    answer = []
     for line in response.iter_lines():
         if line:
             chunk = json.loads(line)
             token = chunk.get("response", "")
-            print(token, end="", flush=True)
-            answer.append(token)
+            if token:
+                yield token
             if chunk.get("done"):
                 break
 
+
+# ── Blocking (CLI) ────────────────────────────────────────────────────────────
+
+def generate(prompt: str) -> str:
+    """
+    Blocking wrapper around stream_generate — prints tokens to stdout as they
+    arrive and returns the full answer string. Used by CLI main.py.
+    """
+    answer = []
+    for token in stream_generate(prompt):
+        print(token, end="", flush=True)
+        answer.append(token)
     print()
     return "".join(answer)
